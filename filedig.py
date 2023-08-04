@@ -9,6 +9,21 @@ import time
 import posixpath
 import re
 
+#Global-variables
+DOMAIN = ''
+USER = ''
+CWD=''
+T_FORMAT = []
+S_FORMAT = []
+Z_FORMAT = []
+
+##########
+## T_FORMAT  --> For storing timestamp in dd/mm/yyyyThh:mm:ss format
+## S_FORMAT  --> For storing timestamp in dd/MM/yyyy:hh:mm:ss format
+## Z_FORMAT  --> For storing timestamp in dd/mm/yyy:hh:mm:ss format
+## T_RANGE  --> Holds times within a rage of +/- 10 seconds of the given file's mtime timestamp
+##########
+
 def statFile(AB_FILE):
     print("")
     print("=================== FILE STAT ========================\n")
@@ -45,10 +60,13 @@ def getTimeRange(AB_FILE):
         Z_FORMAT.append(time.strftime('%d/%b/%Y:%H:%M:%S', T_S))
     return T_FORMAT,S_FORMAT,Z_FORMAT
 
-def digLog(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
-    LogArray=[]
-    LogDig=[]
-    F_PATH=''
+def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
+    LogArray= []
+    TLogDig = []
+    XLogDig = []
+    SLogDig = []
+    LogDig  = []
+    F_PATH  =''
     LogPath = [PATH,"/var/log/","/var/log/proftpd/"]
     for path in LogPath:
         for Files in os.walk(path):
@@ -71,7 +89,7 @@ def digLog(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                 if match is not None:
                     logLine = match.group()
                     if logLine in S_FORMAT:
-                        LogDig.append(lines)
+                        XLogDig.append(lines)
                     
         if 'transfer' in log:
             if '.zip' in log:
@@ -84,7 +102,7 @@ def digLog(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                         if match is not None:
                             logLine = match.group()
                             if logLine in Z_FORMAT:
-                                LogDig.append(decoded_line)
+                                TLogDig.append(decoded_line)
      
             else:
                 R_OPEN = open(log,'r')
@@ -93,7 +111,7 @@ def digLog(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                     if match is not None:
                         logLine = match.group()
                         if logLine in Z_FORMAT:
-                            LogDig.append(lines)
+                            TLogDig.append(lines)
         
         if 'secure' in log:
             if '.xz' in log:
@@ -105,16 +123,18 @@ def digLog(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                 if match is not None:
                     logLine = match.group()
                     if logLine in T_FORMAT:
-                        LogDig.append(lines)
-    return LogDig
+                        SLogDig.append(lines)
+                        
+    return XLogDig,TLogDig,SLogDig
 
-def LogResolver():
+def LogPathResolver():
     length = 0
     PATH=''
     CWD = str(Path.cwd())
     try:
         if len(Path.cwd().parts) >= 4:
             DOMAIN = Path.cwd().parts[4]
+            USER = Path.cwd().parts[3]
         else:
             print("Please re-run the script after cd 'ing to site's docroot!")
             exit()
@@ -130,17 +150,70 @@ def LogResolver():
     sys.stderr = object
     return f"/{PATH}/var/{DOMAIN}/logs/"
 
+def FileChainer():
+    
+    TIMESTAMP = ''
+    FileDict = {}
+    M_ARRAY = []
+    
+    for files in os.walk(CWD):
+        curDir = files[0]
+        subDir = files[1]
+        subFiles = files[2] 
+        for subFile in subFiles:
+            absPath = posixpath.join(curDir,subFile)
+            if absPath.endswith(".php") or absPath.endswith(".js"):
+                TIME = os.path.getmtime(absPath)
+                year,month,day,hour,minute,second=time.localtime(TIME)[:-3]
+                TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
+                if subFile not in FileDict:
+                    FileDict[subFile] = [TIMESTAMP,absPath]
+
+    for item in FileDict:
+        if FileDict[item][0] in Z_FORMAT:
+            M_ARRAY.append(FileDict[item][1])
+        
+    return M_ARRAY
+
 args = sys.argv[1:]
+
 if len(args) == 1:
     PATH = Path(args[0])
+    if PATH.is_file() == 0:
+        print("=============== NOTICE ===============\n")
+        print("Please make sure you've fed a relative filepath!!")
+        exit()
+        
     AB_FILE = PATH.resolve()
     statFile(AB_FILE)
-    T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
-    L_PATH = LogResolver()
-    LogDig = digLog(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
-    print("=================== LOG ENTRIES ========================\n")
-    print("Below is a list of logs that correlate to the given File's mtime")
+    TLogDig,SLogDig,ZLogDig = getTimeRange(AB_FILE)
+    L_PATH = LogPathResolver()
+    XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
+    
+    print("=================== LOG ENTRIES ===================\n")
+    print("Below is a list of logs that correlate to the given file's mtime")
     print("Please be aware that this script only selects logs that are within")
     print("a +/-10 second range of the mtime value.\n")
-    for lines in LogDig:
-        print(f"{lines}\n")
+    
+    if len(TLogDig) > 0:
+        print("Logs from website's transfer log")
+        print("================================\n")
+        for lines in TLogDig:
+            print(f"{lines}\n")
+            
+    elif len(SLogDig) > 0:
+        print("Entries from SFTP log")
+        print("=====================\n")
+        for lines in XLogDig:
+            print(f"{lines}\n")
+            
+    elif len(ZLogDig) > 0:
+        print("Entries from FTP log")
+        print("====================\n")
+        for lines in SLogDig:
+            print(f"{lines}\n")
+            
+    FC_ARRAY = FileChainer()
+    if len(FC_ARRAY) > 0:
+        
+            
