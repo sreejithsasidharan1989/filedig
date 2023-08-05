@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python3
 import sys
 import zipfile
 import tarfile
@@ -18,9 +18,9 @@ S_FORMAT = []
 Z_FORMAT = []
 
 ##########
-## T_FORMAT  --> For storing timestamp in dd/mm/yyyyThh:mm:ss format
-## S_FORMAT  --> For storing timestamp in dd/MM/yyyy:hh:mm:ss format
-## Z_FORMAT  --> For storing timestamp in dd/mm/yyy:hh:mm:ss format
+## T_FORMAT  --> For storing timestamp in dd-mm-yyyyThh:mm:ss format 01-08-2023T19:30:45
+## S_FORMAT  --> For storing timestamp in dd/MM/yyyy:hh:mm:ss format 01/Aug/2023:19:30:45
+## Z_FORMAT  --> For storing timestamp in dd/mm/yyy:hh:mm:ss format  01/80/2023:19:30:45
 ## T_RANGE  --> Holds times within a rage of +/- 10 seconds of the given file's mtime timestamp
 ##########
 
@@ -57,7 +57,7 @@ def getTimeRange(AB_FILE):
         T_S = time.localtime(times)
         T_FORMAT.append(time.strftime('%Y-%m-%dT%H:%M:%S', T_S))
         S_FORMAT.append(time.strftime('%d/%b/%Y:%H:%M:%S', T_S))
-        Z_FORMAT.append(time.strftime('%d/%b/%Y:%H:%M:%S', T_S))
+        Z_FORMAT.append(time.strftime('%d/%m/%Y:%H:%M:%S', T_S))
     return T_FORMAT,S_FORMAT,Z_FORMAT
 
 def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
@@ -81,49 +81,49 @@ def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
     for log in LogArray:
         if 'xfer' in log:
             if '.xz' in log:
-                R_OPEN=lzma.open(log,'rt', encoding='iso-8859-1')
+                R_OPEN = lzma.open(log,'rt', encoding='iso-8859-1')
             else:
-                R_OPEN = open(log,'r')
-            for lines in R_OPEN:
-                match = re.search("\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", lines)
+                R_OPEN = open(log,"r", errors='ignore')
+            for xlines in R_OPEN:
+                match = re.search("\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", xlines)
                 if match is not None:
                     logLine = match.group()
                     if logLine in S_FORMAT:
-                        XLogDig.append(lines)
+                        XLogDig.append(xlines)
                     
-        if 'transfer' in log:
+        elif 'transfer' in log:
             if '.zip' in log:
-                R_OPEN = zipfile.ZipFile(log, 'r')
-                for name in R_OPEN.namelist():
-                    F_OPEN = R_OPEN.open(name)
-                    for line in F_OPEN:
-                        decoded_line = line.decode('utf-8').strip()
-                        match = re.search("\d{2}\/\d{2}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", decoded_line)
-                        if match is not None:
-                            logLine = match.group()
-                            if logLine in Z_FORMAT:
-                                TLogDig.append(decoded_line)
+                 R_OPEN = zipfile.ZipFile(log, 'r')
+                 for name in R_OPEN.namelist():
+                     F_OPEN = R_OPEN.open(name)
+                     for Tline in F_OPEN:
+                         decoded_line = Tline.decode('utf-8').strip()
+                         match = re.search("\d{2}\/\d{2}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", decoded_line)
+                         if match is not None:
+                             logLine = match.group()
+                             if logLine in S_FORMAT:
+                                 TLogDig.append(decoded_line)
      
             else:
-                R_OPEN = open(log,'r')
-                for lines in R_OPEN:
-                    match = re.search(r"\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", lines)
+                R_OPEN = open(log,'r', errors='ignore')
+                for Tlines in R_OPEN:
+                    match = re.search(r"\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", Tlines)
                     if match is not None:
                         logLine = match.group()
-                        if logLine in Z_FORMAT:
-                            TLogDig.append(lines)
+                        if logLine in S_FORMAT:
+                            TLogDig.append(Tlines)
         
-        if 'secure' in log:
-            if '.xz' in log:
+        elif 'secure' in log:
+             if '.xz' in log:
                 R_OPEN=lzma.open(log,'rt')
-            else:
-                R_OPEN = open(log,'r')
-            for lines in R_OPEN:
-                match = re.search(r"\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}", lines)
-                if match is not None:
-                    logLine = match.group()
-                    if logLine in T_FORMAT:
-                        SLogDig.append(lines)
+             else:
+                 R_OPEN = open(log,'r', errors='ignore')
+             for Slines in R_OPEN:
+                 match = re.search(r"\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}", Slines)
+                 if match is not None:
+                     logLine = match.group()
+                     if logLine in T_FORMAT:
+                         SLogDig.append(Slines)
                         
     return XLogDig,TLogDig,SLogDig
 
@@ -148,14 +148,13 @@ def LogPathResolver():
     except:
         print("Something went wrong! Please re-run the script after cd 'ing to site's docroot!")
     sys.stderr = object
-    return f"/{PATH}/var/{DOMAIN}/logs/"
+    return f"/{PATH}/var/{DOMAIN}/logs/",CWD
 
-def FileChainer():
+def FileChainer(CWD,Z_FORMAT):
     
     TIMESTAMP = ''
     FileDict = {}
     M_ARRAY = []
-    
     for files in os.walk(CWD):
         curDir = files[0]
         subDir = files[1]
@@ -168,11 +167,10 @@ def FileChainer():
                 TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
                 if subFile not in FileDict:
                     FileDict[subFile] = [TIMESTAMP,absPath]
+    for Ditem in FileDict:
+        if FileDict[Ditem][0] in Z_FORMAT:
+            M_ARRAY.append(FileDict[Ditem][1])
 
-    for item in FileDict:
-        if FileDict[item][0] in Z_FORMAT:
-            M_ARRAY.append(FileDict[item][1])
-        
     return M_ARRAY
 
 args = sys.argv[1:]
@@ -180,40 +178,53 @@ args = sys.argv[1:]
 if len(args) == 1:
     PATH = Path(args[0])
     if PATH.is_file() == 0:
-        print("=============== NOTICE ===============\n")
-        print("Please make sure you've fed a relative filepath!!")
+        print("\n=============== NOTICE ===============")
+        print("Please make sure you've fed a relative filepath!!\n")
         exit()
         
     AB_FILE = PATH.resolve()
     statFile(AB_FILE)
-    TLogDig,SLogDig,ZLogDig = getTimeRange(AB_FILE)
-    L_PATH = LogPathResolver()
+    T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
+    L_PATH,CWD = LogPathResolver()
     XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
+    FC_ARRAY = FileChainer(CWD,Z_FORMAT)
+
+    if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0 or len(FC_ARRAY) > 0:
     
-    print("=================== LOG ENTRIES ===================\n")
-    print("Below is a list of logs that correlate to the given file's mtime")
-    print("Please be aware that this script only selects logs that are within")
-    print("a +/-10 second range of the mtime value.\n")
+        print("=================== LOG ENTRIES ===================\n")
+        print("Below is a list of logs & files that correlate to the given file's mtime")
+        print("Please be aware that the script only selects logs & files that are within")
+        print("a +/-10 second range of the mtime value. Be sure to check other areas.\n")
     
-    if len(TLogDig) > 0:
-        print("Logs from website's transfer log")
-        print("================================\n")
-        for lines in TLogDig:
-            print(f"{lines}\n")
+        if len(TLogDig) > 0:
+            print("Logs from website's transfer log")
+            print("================================\n")
+            for lines in TLogDig:
+                print(f"{lines}\n")
             
-    elif len(SLogDig) > 0:
-        print("Entries from SFTP log")
-        print("=====================\n")
-        for lines in XLogDig:
-            print(f"{lines}\n")
+        if len(SLogDig) > 0:
+          print("Entries from SFTP log")
+          print("=====================\n")
+          for lines in SLogDig:
+              print(f"{lines}\n")
             
-    elif len(ZLogDig) > 0:
-        print("Entries from FTP log")
-        print("====================\n")
-        for lines in SLogDig:
-            print(f"{lines}\n")
+        if len(XLogDig) > 0:
+          print("Entries from FTP log")
+          print("====================\n")
+          for lines in XLogDig:
+              print(f"{lines}\n")
             
-    FC_ARRAY = FileChainer()
-    if len(FC_ARRAY) > 0:
+        if len(FC_ARRAY) > 0:
+            print("Files modified around the same time")
+            print("====================================\n")
+            for items in FC_ARRAY:
+                print(items+"\n")
+
+    else:
+        print("=================== NO RELEVANT LOGS FOUND! ===================\n")
         
-            
+FC_ARRAY = None
+XLogDig = None
+TLogDig = None
+SLogDig = None
+FileDict = None
