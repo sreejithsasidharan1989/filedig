@@ -1,17 +1,15 @@
 ## FileDig
 -----
 
-[![N|Solid](https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg)](https://www.python.org/)
-
 ##### What is FileDig
-As the name implies, this python script digs into various logs and find out the log entries that correlate with the mtime of the given file. The script creates a time array for the inputted file that is within a +/- 10 seconds range, then it compares the logs to the array to check if there are any matches. Additionally, it creates a second array of mtimes for all files found in the same directory and its subdirectories and compares them to the mtime of the given file to see if any other files were modified at the same time.
+As the name implies, this Python script digs into various logs and finds out the log entries that correlate with the mtime of the given file. The script creates a time array for the inputted file that is within a +/- 10 seconds range, then it compares the logs with the array to check if there are any matches. Additionally, it creates a second array of mtimes for all files found in the same directory and its subdirectories and compares them to the mtime of the given file to see if any other files were modified simultaneously.
 
 ##### How to use the script
 The script is currently configured to check for the following conditions:
 
-1. The input must be atleast a relative file path
-2. The length of the "Current Working Directory" must be atleast 4 becuase the path to it's logs are determined using this value
-3. The script uses several python list to temporarily save the gathered data. If all of these lists are empty, it will not display any information other than the file stat info.
+1. The input must be at least a relative file path
+2. The length of the "Current Working Directory" must be at least 4 because the path to its logs is determined using this value
+3. The script uses several Python list to temporarily save the gathered data. If all of these lists are empty, it will not display any information other than the file stat info.
 
 * **$ cd to the document root of the website**
 ```
@@ -26,7 +24,7 @@ public_html]$ filedig index.php
 public_html]$ filedig wp-includes/update.php
 ```
 
-* **The script will print all available logs that correlates with the mtime of the file**
+* **The script will print all available logs that correlate with the mtime of the file**
 ```
 public_html]$ filedig wp-config.php
 
