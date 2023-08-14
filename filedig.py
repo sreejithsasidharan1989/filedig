@@ -92,13 +92,13 @@ def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                         XLogDig.append(xlines)
                     
         elif 'transfer' in log:
-            if '.zip' in log:
+            if 'zip' in log:
                  R_OPEN = zipfile.ZipFile(log, 'r')
                  for name in R_OPEN.namelist():
                      F_OPEN = R_OPEN.open(name)
                      for Tline in F_OPEN:
                          decoded_line = Tline.decode('utf-8').strip()
-                         match = re.search("\d{2}\/\d{2}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", decoded_line)
+                         match = re.search("\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2}", decoded_line)
                          if match is not None:
                              logLine = match.group()
                              if logLine in S_FORMAT:
@@ -161,7 +161,7 @@ def FileChainer(CWD,Z_FORMAT):
         subFiles = files[2] 
         for subFile in subFiles:
             absPath = posixpath.join(curDir,subFile)
-            if absPath.endswith(".php") or absPath.endswith(".js"):
+            if absPath.endswith(".php") or absPath.endswith(".js") or absPath.endswith(".otc"):
                 TIME = os.path.getmtime(absPath)
                 year,month,day,hour,minute,second=time.localtime(TIME)[:-3]
                 TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
@@ -175,7 +175,7 @@ def FileChainer(CWD,Z_FORMAT):
 
 args = sys.argv[1:]
 
-if len(args) == 1:
+if len(args) == 1 or len(args) == 2:
     PATH = Path(args[0])
     if PATH.is_file() == 0:
         print("\n=============== NOTICE ===============")
@@ -187,9 +187,8 @@ if len(args) == 1:
     T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
     L_PATH,CWD = LogPathResolver()
     XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
-    FC_ARRAY = FileChainer(CWD,Z_FORMAT)
 
-    if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0 or len(FC_ARRAY) > 0:
+    if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0:
     
         print("=================== LOG ENTRIES ===================\n")
         print("Below is a list of logs & files that correlate to the given file's mtime")
@@ -214,15 +213,17 @@ if len(args) == 1:
           for lines in XLogDig:
               print(f"{lines}\n")
             
-        if len(FC_ARRAY) > 0:
-            print("Files modified around the same time")
-            print("====================================\n")
-            for items in FC_ARRAY:
-                print(items+"\n")
-
     else:
         print("=================== NO RELEVANT LOGS FOUND! ===================\n")
-        
+
+    if len(args) == 2:
+        if '-stat' in args[1]:
+             FC_ARRAY = FileChainer(CWD,Z_FORMAT)
+             if len(FC_ARRAY) > 0:
+                print("Files modified around the same time")
+                print("====================================\n")
+                for items in FC_ARRAY:
+                    print(items+"\n")
 FC_ARRAY = None
 XLogDig = None
 TLogDig = None
