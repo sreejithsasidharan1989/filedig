@@ -61,6 +61,7 @@ def getTimeRange(AB_FILE):
     return T_FORMAT,S_FORMAT,Z_FORMAT
 
 def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
+    User=PATH.split('/')[3]
     LogArray= []
     TLogDig = []
     XLogDig = []
@@ -122,7 +123,7 @@ def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                  match = re.search(r"\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}", Slines)
                  if match is not None:
                      logLine = match.group()
-                     if logLine in T_FORMAT:
+                     if logLine in T_FORMAT and User in Slines:
                          SLogDig.append(Slines)
                         
     return XLogDig,TLogDig,SLogDig
@@ -151,22 +152,24 @@ def LogPathResolver():
     return f"/{PATH}/var/{DOMAIN}/logs/",CWD
 
 def FileChainer(CWD,Z_FORMAT):
-    
     TIMESTAMP = ''
     FileDict = {}
     M_ARRAY = []
+    subCount = 0
     for files in os.walk(CWD):
         curDir = files[0]
         subDir = files[1]
-        subFiles = files[2] 
+        subFiles = files[2]
         for subFile in subFiles:
             absPath = posixpath.join(curDir,subFile)
-            if absPath.endswith(".php") or absPath.endswith(".js") or absPath.endswith(".otc"):
-                TIME = os.path.getmtime(absPath)
-                year,month,day,hour,minute,second=time.localtime(TIME)[:-3]
-                TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
-                if subFile not in FileDict:
-                    FileDict[subFile] = [TIMESTAMP,absPath]
+            TIME = os.path.getmtime(absPath)
+            year,month,day,hour,minute,second=time.localtime(TIME)[:-3]
+            TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
+            if subFile not in FileDict:
+                FileDict[subFile] = [TIMESTAMP,absPath]
+            else:
+                FileDict[subFile + str(subCount)] = [TIMESTAMP,absPath]
+                subCount += 1
     for Ditem in FileDict:
         if FileDict[Ditem][0] in Z_FORMAT:
             M_ARRAY.append(FileDict[Ditem][1])
@@ -174,9 +177,9 @@ def FileChainer(CWD,Z_FORMAT):
     return M_ARRAY
 
 args = sys.argv[1:]
+PATH = Path(args[0])
 
-if len(args) == 1 or len(args) == 2:
-    PATH = Path(args[0])
+if len(args) == 1:
     if PATH.is_file() == 0:
         print("\n=============== NOTICE ===============")
         print("Please make sure you've fed a relative filepath!!\n")
@@ -216,16 +219,34 @@ if len(args) == 1 or len(args) == 2:
     else:
         print("=================== NO RELEVANT LOGS FOUND! ===================\n")
 
-    if len(args) == 2:
-        if '-stat' in args[1]:
-             FC_ARRAY = FileChainer(CWD,Z_FORMAT)
-             if len(FC_ARRAY) > 0:
-                print("Files modified around the same time")
-                print("====================================\n")
-                for items in FC_ARRAY:
-                    print(items+"\n")
+elif len(args) == 2:
+    if '-stat' in args[1]:
+         AB_FILE = PATH.resolve()
+         statFile(AB_FILE)
+         T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
+         L_PATH,CWD = LogPathResolver()
+         FC_ARRAY = FileChainer(CWD,Z_FORMAT)
+         if len(FC_ARRAY) > 0:
+            print("Files modified around the same time")
+            print("====================================\n")
+            for items in FC_ARRAY:
+                print(items+"\n")
+
+else:
+    print("=================== HELP!  ===================\n")
+    print("Feed a relative file path to the script as an argument to")
+    print("view logs that align with the file's Modification timestamp")
+    print("Example:\n")
+    print("{:10} {:30}".format('~/filedig wp-content/plugins/hello/index.php','T'))
+    print("This will print any logs that correlates with the mtime of wp-content/plugins/hello/index.php")
+    print("\n")
+    print("To view other files that share a similar mtime, add -stat to to the above command")
+    print("Example:\n")
+    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -stat"))
+    print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php")
 FC_ARRAY = None
 XLogDig = None
 TLogDig = None
 SLogDig = None
 FileDict = None
+
