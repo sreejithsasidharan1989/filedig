@@ -119,12 +119,12 @@ def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                 R_OPEN=lzma.open(log,'rt')
              else:
                  R_OPEN = open(log,'r', errors='ignore')
-             for Slines in R_OPEN:
-                 match = re.search(r"\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}", Slines)
-                 if match is not None:
-                     logLine = match.group()
-                     if logLine in T_FORMAT and User in Slines:
-                         SLogDig.append(Slines)
+                 for Slines in R_OPEN:
+                     match = re.search(r"\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}", Slines)
+                     if match is not None:
+                         logLine = match.group()
+                         if logLine in T_FORMAT and User in Slines:
+                             SLogDig.append(Slines)
                         
     return XLogDig,TLogDig,SLogDig
 
