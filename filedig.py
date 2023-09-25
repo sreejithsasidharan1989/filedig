@@ -176,10 +176,34 @@ def FileChainer(CWD,Z_FORMAT):
 
     return M_ARRAY
 
-args = sys.argv[1:]
-PATH = Path(args[0])
+def __helper():
+
+    print("\n=================== HELP!  ===================\n")
+    print("Feed a relative file path to the script as an argument to")
+    print("view logs that align with the file's Modification timestamp\n")
+    print("Example:")
+    print("========\n")
+    print("{:10} {:30}\n".format('~/filedig wp-content/plugins/hello/index.php','T'))
+    print("This will print any logs that correlates with the mtime of wp-content/plugins/hello/index.php")
+    print("\n")
+    print("To view other files that share a similar mtime, add -stat to to the above command\n")
+    print("Example:")
+    print("========\n")
+    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -stat"))
+    print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php")
+    return 1
+
+try:
+    args = sys.argv[1:]
+    PATH = Path(args[0])
+
+except:
+    print("Something Went Wrong! Try again!")
+    __helper()
 
 if len(args) == 1:
+    if '-h' in args[0]:
+        __helper()
     if PATH.is_file() == 0:
         print("\n=============== NOTICE ===============")
         print("Please make sure you've fed a relative filepath!!\n")
@@ -202,7 +226,12 @@ if len(args) == 1:
             print("Logs from website's transfer log")
             print("================================\n")
             for lines in TLogDig:
-                print(f"{lines}\n")
+                if 'POST' in lines:
+                    print("Log entries with POST request")
+                    print("=============================\n")
+                    print(f"{lines}\n")
+                else:
+                    print(f"{lines}\n")
             
         if len(SLogDig) > 0:
           print("Entries from SFTP log")
@@ -232,18 +261,9 @@ elif len(args) == 2:
             for items in FC_ARRAY:
                 print(items+"\n")
 
-else:
-    print("=================== HELP!  ===================\n")
-    print("Feed a relative file path to the script as an argument to")
-    print("view logs that align with the file's Modification timestamp")
-    print("Example:\n")
-    print("{:10} {:30}".format('~/filedig wp-content/plugins/hello/index.php','T'))
-    print("This will print any logs that correlates with the mtime of wp-content/plugins/hello/index.php")
-    print("\n")
-    print("To view other files that share a similar mtime, add -stat to to the above command")
-    print("Example:\n")
-    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -stat"))
-    print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php")
+#else:
+#    __helper()
+
 FC_ARRAY = None
 XLogDig = None
 TLogDig = None
