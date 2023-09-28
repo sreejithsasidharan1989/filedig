@@ -26,7 +26,7 @@ Z_FORMAT = []
 
 def statFile(AB_FILE):
     print("")
-    print("=================== FILE STAT ========================\n")
+    print('\033[1m'+"=================== FILE STAT ========================\n"+'\033[0m')
     MTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_mtime))
     ATIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_atime))
     CTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_ctime))
@@ -178,20 +178,20 @@ def FileChainer(CWD,Z_FORMAT):
 
 def __helper():
 
-    print("\n=================== HELP!  ===================\n")
+    print('\033[1m'+"\n=================== HELP!  ===================\n")
     print("Feed a relative file path to the script as an argument to")
     print("view logs that align with the file's Modification timestamp\n")
-    print("Example:")
+    print("Example"+'\33[0m')
     print("========\n")
-    print("{:10} {:30}\n".format('~/filedig wp-content/plugins/hello/index.php','T'))
+    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php"))
     print("This will print any logs that correlates with the mtime of wp-content/plugins/hello/index.php")
     print("\n")
     print("To view other files that share a similar mtime, add -stat to to the above command\n")
-    print("Example:")
+    print('\33[1m'+"Example"+'\33[0m')
     print("========\n")
     print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -stat"))
-    print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php")
-    return 1
+    print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php\n")
+    exit()
 
 try:
     args = sys.argv[1:]
@@ -204,9 +204,9 @@ except:
 if len(args) == 1:
     if '-h' in args[0]:
         __helper()
-    if PATH.is_file() == 0:
-        print("\n=============== NOTICE ===============")
-        print("Please make sure you've fed a relative filepath!!\n")
+    if PATH.is_file() == 0 and '-h' not in args:
+        print('\033[1m'+"\n=============== NOTICE ==============="+'\033[0m')
+        print("Please make sure you're using a relative filepath!!\n")
         exit()
         
     AB_FILE = PATH.resolve()
@@ -217,17 +217,17 @@ if len(args) == 1:
 
     if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0:
     
-        print("=================== LOG ENTRIES ===================\n")
+        print('\033[1m'+"=================== LOG ENTRIES ===================\n")
         print("Below is a list of logs & files that correlate to the given file's mtime")
         print("Please be aware that the script only selects logs & files that are within")
-        print("a +/-10 second range of the mtime value. Be sure to check other areas.\n")
+        print("a +/-10 second range of the mtime value. Be sure to check other areas.\n"+'\033[0m')
     
         if len(TLogDig) > 0:
-            print("Logs from website's transfer log")
+            print('\033[1m'+"Logs from website's transfer log"+'\033[0m')
             print("================================\n")
             for lines in TLogDig:
                 if 'POST' in lines:
-                    print("Log entries with POST request")
+                    print("Log entries with"+'\033[1;31m'+"POST"+'\033[0m'+"request")
                     print("=============================\n")
                     print(f"{lines}\n")
                 else:
@@ -246,7 +246,7 @@ if len(args) == 1:
               print(f"{lines}\n")
             
     else:
-        print("=================== NO RELEVANT LOGS FOUND! ===================\n")
+        print('\033[1m'+"=================== NO RELEVANT LOGS FOUND! ===================\n"+'\033[0m')
 
 elif len(args) == 2:
     if '-stat' in args[1]:
@@ -256,8 +256,8 @@ elif len(args) == 2:
          L_PATH,CWD = LogPathResolver()
          FC_ARRAY = FileChainer(CWD,Z_FORMAT)
          if len(FC_ARRAY) > 0:
-            print("Files modified around the same time")
-            print("====================================\n")
+            print('\033[1m'+"Files modified around the same time")
+            print("====================================\n"+'\033[0m')
             for items in FC_ARRAY:
                 print(items+"\n")
 
@@ -269,4 +269,3 @@ XLogDig = None
 TLogDig = None
 SLogDig = None
 FileDict = None
-
