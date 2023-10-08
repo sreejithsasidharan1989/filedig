@@ -16,6 +16,8 @@ CWD=''
 T_FORMAT = []
 S_FORMAT = []
 Z_FORMAT = []
+POSTLOG  = []
+NORMALOG = []
 
 ##########
 ## T_FORMAT  --> For storing timestamp in dd-mm-yyyyThh:mm:ss format 01-08-2023T19:30:45
@@ -227,11 +229,17 @@ if len(args) == 1:
             print("================================\n")
             for lines in TLogDig:
                 if 'POST' in lines:
-                    print("Log entries with"+'\033[1;31m'+"POST"+'\033[0m'+"request")
-                    print("=============================\n")
-                    print(f"{lines}\n")
+                    POSTLOG.append(lines)
                 else:
-                    print(f"{lines}\n")
+                    NORMALOG.append(lines)
+            if len(POSTLOG) > 0:
+                print("Log entries with "+'\033[1;31m'+"POST "+'\033[0m'+"request")
+                print("=============================\n")
+                for item in POSTLOG:
+                    print(item)
+            print("\n================================\n")
+            for item in NORMALOG:
+                print(item)
             
         if len(SLogDig) > 0:
           print("Entries from SFTP log")
