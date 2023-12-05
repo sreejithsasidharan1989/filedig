@@ -8,11 +8,16 @@ import lzma
 import time
 import posixpath
 import re
+import shutil
+import subprocess
+import filecmp
 
 #Global-variables
+PATH = ''
 DOMAIN = ''
 USER = ''
 CWD=''
+IFLAG = 0
 T_FORMAT = []
 S_FORMAT = []
 Z_FORMAT = []
@@ -27,23 +32,29 @@ NORMALOG = []
 ##########
 
 def statFile(AB_FILE):
-    print("")
-    print('\033[1m'+"=================== FILE STAT ========================\n"+'\033[0m')
-    MTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_mtime))
-    ATIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_atime))
-    CTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_ctime))
-    print("{:33}{}\n".format("File was last modified on:",MTIME))
-    print("{:33}{}\n".format("File was last accessed on:",ATIME))
-    print("{:3} {}\n".format("File inode was last modified on:",CTIME))
-    print("{:33}{}\n".format("Absolute File Path:",AB_FILE))
+    try:
+        print('\033[1m'+"=================== FILE STAT ========================\n"+'\033[0m')
+        MTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_mtime))
+        ATIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_atime))
+        CTIME=time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(os.stat(AB_FILE).st_ctime))
+        print("{:33}{}\n".format("File was last modified on:",MTIME))
+        print("{:33}{}\n".format("File was last accessed on:",ATIME))
+        print("{:3} {}\n".format("File inode was last modified on:",CTIME))
+        print("{:33}{}\n".format("Absolute File Path:",AB_FILE))
+    except FileNotFoundError:
+        pass
 
-def getTimeRange(AB_FILE):
+def getTimeRange(AB_FILE,IFLAG):
     T_FORMAT=[]
     S_FORMAT=[]
     Z_FORMAT=[]
     T_RANGE= []
-    
-    TIME=os.path.getmtime(AB_FILE)
+    if IFLAG==1:
+        TIME=os.path.getctime(AB_FILE)
+    elif IFLAG==2:
+        TIME=os.path.getatime(AB_FILE)
+    else:
+        TIME=os.path.getmtime(AB_FILE)
     T_ARRAY=time.localtime(TIME)
     year,month,day,hour,minute,second=time.localtime(TIME)[:-3]
     TIMESTAMP="%02d/%02d/%4d:%02d:%02d:%02d"%(day,month,year,hour,minute,second)
@@ -130,28 +141,27 @@ def LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,PATH):
                         
     return XLogDig,TLogDig,SLogDig
 
-def LogPathResolver():
+def LogPathResolver(AB_FILE):
     length = 0
-    PATH=''
-    CWD = str(Path.cwd())
+    PATHS=''
     try:
-        if len(Path.cwd().parts) >= 4:
-            DOMAIN = Path.cwd().parts[4]
-            USER = Path.cwd().parts[3]
+        if len(AB_FILE.parts) >= 4:
+            DOMAIN = AB_FILE.parts[4]
+            USER = AB_FILE.parts[3]
         else:
             print("Please re-run the script after cd 'ing to site's docroot!")
             exit()
 
-        items = Path.cwd().parts
+        items = AB_FILE.parts
         length = len(items)
         if length >= 3:
-            PATH = '/'.join(items[1:4])
+            PATHS = '/'.join(items[1:4])
         else:
-            PATH = '/'.join(items)
+            PATHS = '/'.join(items)
     except:
         print("Something went wrong! Please re-run the script after cd 'ing to site's docroot!")
     sys.stderr = object
-    return f"/{PATH}/var/{DOMAIN}/logs/",CWD
+    return f"/{PATHS}/var/{DOMAIN}/logs/",f"/{PATHS}/{DOMAIN}"
 
 def FileChainer(CWD,Z_FORMAT):
     TIMESTAMP = ''
@@ -178,6 +188,57 @@ def FileChainer(CWD,Z_FORMAT):
 
     return M_ARRAY
 
+def LogPrinter(TLogDig,SLogDig,XLogDig):
+    if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0:
+        print('\033[1m'+"=================== LOG ENTRIES ===================\n")
+        print("Below is a list of logs & files that correlate to the given file's mtime")
+        print("Please be aware that the script only selects logs & files that are within")
+        print("a +/-10 second range of the mtime value. Be sure to check other areas.\n"+'\033[0m')
+        if len(TLogDig) > 0:
+            print("====================================")
+            print("║ "+'\033[1m'+"Logs from website's transfer log"+'\033[0m'+" ║")
+            print("====================================\n")
+            for lines in TLogDig:
+                if 'POST' in lines:
+                    POSTLOG.append(lines)
+                else:
+                    NORMALOG.append(lines)
+
+            if len(POSTLOG) > 0:
+                print("Log entries with "+'\033[1;31m'+"POST "+'\033[0m'+"request")
+                print("=============================\n")
+                for item in POSTLOG:
+                    print(item)
+                print("\n================================\n")
+            for item in NORMALOG:
+                print(item)
+
+        if len(SLogDig) > 0:
+            print("Entries from SFTP log")
+            print("=====================\n")
+            for lines in SLogDig:
+                print(f"{lines}\n")
+
+        if len(XLogDig) > 0:
+            print("Entries from FTP log")
+            print("====================\n")
+            for lines in XLogDig:
+                print(f"{lines}\n")
+
+    else:
+        print('\033[1m'+"=================== NO RELEVANT LOGS FOUND! ===================\n"+'\033[0m')
+
+def __update():
+   local_filedig=os.path.realpath(__file__)
+   os.chdir(Path.home())
+   subprocess.run(["git", "clone", "https://github.com/sreejithsasidharan1989/filedig","Filedig"],stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+   clone_filedig=posixpath.join(Path.home(),'Filedig/filedig.py')
+   if filecmp.cmp(local_filedig, clone_filedig, shallow=False):
+       shutil.rmtree('Filedig')
+   else:
+       print('\033[42m'+"Note: This script may have a new update!"+'\33[0m')
+       shutil.rmtree('Filedig')
+
 def __helper():
 
     print('\033[1m'+"\n=================== HELP!  ===================\n")
@@ -193,6 +254,10 @@ def __helper():
     print("========\n")
     print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -stat"))
     print("This will print list of files that correlate with the mtime of wp-content/plugins/hello/index.php\n")
+    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -C"))
+    print("This will match the C-Time of the given file against the logs rather than using its M-Time\n")
+    print("{:30}".format("~/filedig wp-content/plugins/hello/index.php -A"))
+    print("This will match the A-Time of the given file against the logs rather than using its M-Time\n")
     exit()
 
 try:
@@ -203,74 +268,54 @@ except:
     print("Something Went Wrong! Try again!")
     __helper()
 
+AB_FILE = PATH.resolve()
+    
+__update()
+
 if len(args) == 1:
-    if '-h' in args[0]:
+    if '-h' in args[0] and len(args[0]) == 1:
         __helper()
-    if PATH.is_file() == 0 and '-h' not in args:
+    if AB_FILE.is_file() == 0 and '-h' not in args:
         print('\033[1m'+"\n=============== NOTICE ==============="+'\033[0m')
         print("Please make sure you're using a relative filepath!!\n")
         exit()
-        
-    AB_FILE = PATH.resolve()
     statFile(AB_FILE)
-    T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
-    L_PATH,CWD = LogPathResolver()
+    T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE,IFLAG)
+    L_PATH,CWD = LogPathResolver(AB_FILE)
     XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
-
-    if len(TLogDig) > 0 or len(SLogDig) > 0 or len(XLogDig) > 0:
-    
-        print('\033[1m'+"=================== LOG ENTRIES ===================\n")
-        print("Below is a list of logs & files that correlate to the given file's mtime")
-        print("Please be aware that the script only selects logs & files that are within")
-        print("a +/-10 second range of the mtime value. Be sure to check other areas.\n"+'\033[0m')
-    
-        if len(TLogDig) > 0:
-            print('\033[1m'+"Logs from website's transfer log"+'\033[0m')
-            print("================================\n")
-            for lines in TLogDig:
-                if 'POST' in lines:
-                    POSTLOG.append(lines)
-                else:
-                    NORMALOG.append(lines)
-            if len(POSTLOG) > 0:
-                print("Log entries with "+'\033[1;31m'+"POST "+'\033[0m'+"request")
-                print("=============================\n")
-                for item in POSTLOG:
-                    print(item)
-            print("\n================================\n")
-            for item in NORMALOG:
-                print(item)
-            
-        if len(SLogDig) > 0:
-          print("Entries from SFTP log")
-          print("=====================\n")
-          for lines in SLogDig:
-              print(f"{lines}\n")
-            
-        if len(XLogDig) > 0:
-          print("Entries from FTP log")
-          print("====================\n")
-          for lines in XLogDig:
-              print(f"{lines}\n")
-            
-    else:
-        print('\033[1m'+"=================== NO RELEVANT LOGS FOUND! ===================\n"+'\033[0m')
+    LogPrinter(TLogDig,SLogDig,XLogDig)
 
 elif len(args) == 2:
     if '-stat' in args[1]:
-         AB_FILE = PATH.resolve()
          statFile(AB_FILE)
-         T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE)
-         L_PATH,CWD = LogPathResolver()
+         T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE,IFLAG)
+         L_PATH,CWD = LogPathResolver(AB_FILE)
          FC_ARRAY = FileChainer(CWD,Z_FORMAT)
          if len(FC_ARRAY) > 0:
             print('\033[1m'+"Files modified around the same time")
             print("====================================\n"+'\033[0m')
             for items in FC_ARRAY:
                 print(items+"\n")
-
-#else:
-#    __helper()
+    elif '-C' in args[1]:
+        if AB_FILE.is_file() == 0:
+            print('\033[1;31m'+"Invalid File Path!"+'\033[0m')
+            exit()
+        IFLAG=1
+        statFile(AB_FILE)
+        T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE,IFLAG)
+        L_PATH,CWD = LogPathResolver(AB_FILE)
+        XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
+        LogPrinter(TLogDig,SLogDig,XLogDig)
+    elif '-A' in args[1]:
+        if AB_FILE.is_file() == 0:
+            print('\033[1;31m'+"Invalid File Path!"+'\033[0m')
+            exit()
+        IFLAG=2
+        statFile(AB_FILE)
+        T_FORMAT,S_FORMAT,Z_FORMAT = getTimeRange(AB_FILE,IFLAG)
+        L_PATH,CWD = LogPathResolver(AB_FILE)
+        XLogDig,TLogDig,SLogDig = LogDigger(T_FORMAT,S_FORMAT,Z_FORMAT,L_PATH)
+        LogPrinter(TLogDig,SLogDig,XLogDig)
 
 FC_ARRAY = None
 XLogDig = None
