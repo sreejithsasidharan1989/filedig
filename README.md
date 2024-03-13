@@ -10,6 +10,7 @@ The script is currently configured to check for the following conditions:
 2. The length of the "Current Working Directory" must be at least 4 because the path to its logs is determined using this value.
 3. If not logs were found, it simply display the file stat info.
 4. To view other files that was modified within the range, use **'-stat'** argument.
+5. To search for logs that correspond to the Access or Change timestamp of the provided file.
 
 * **$ cd to the document root of the website**
 ```
@@ -73,6 +74,12 @@ Files modified around the same time
 /chroot/home/example/example.com/public_html/wp-admin/admin.php
 /chroot/home/example/example.com/public_html/wp-config.php
 /chroot/home/example/example.com/public_html/wp-content/plugins/w3-total-cache/index.php
+
+```
+* **To search for logs that correspond to the Access or Change timestamp of the provided file**
+```
+$ filedig wp-config.php -C  ## Search for logs that correlates with the Change timestamp of the given file
+$ filedig wp-config.php -A  ## Search for logs that correlates with the Access timestamp of the given file
 ```
 * **When try to run the script from an un-supposed location**
 ```
